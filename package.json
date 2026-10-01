@@ -1,0 +1,666 @@
+{
+  "name": "claude-queue",
+  "displayName": "Claude in Line",
+  "description": "Fila de tarefas de desenvolvimento para o Claude Code que só executa quando há cota sobrando no plano.",
+  "version": "0.2.0",
+  "publisher": "claude-in-line-dev",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/diOliver13/claude-in-line.git"
+  },
+  "engines": {
+    "vscode": "^1.90.0",
+    "node": ">=18"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "claudeQueue.addTask",
+        "title": "Adicionar tarefa",
+        "category": "Claude in Line",
+        "icon": "$(add)"
+      },
+      {
+        "command": "claudeQueue.addFromSelection",
+        "title": "Adicionar a partir da seleção",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.addFromTodo",
+        "title": "Adicionar TODO sob o cursor",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.runNow",
+        "title": "Executar agora",
+        "category": "Claude in Line",
+        "icon": "$(play)"
+      },
+      {
+        "command": "claudeQueue.pause",
+        "title": "Pausar fila",
+        "category": "Claude in Line",
+        "icon": "$(debug-pause)"
+      },
+      {
+        "command": "claudeQueue.resume",
+        "title": "Retomar fila",
+        "category": "Claude in Line",
+        "icon": "$(debug-continue)"
+      },
+      {
+        "command": "claudeQueue.refresh",
+        "title": "Atualizar",
+        "category": "Claude in Line",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "claudeQueue.openSettings",
+        "title": "Configurações",
+        "category": "Claude in Line",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "claudeQueue.showStatus",
+        "title": "Mostrar status",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.setupMeter",
+        "title": "Configurar medidor (statusline)",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.openDataFolder",
+        "title": "Abrir pasta de dados",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.refreshReading",
+        "title": "Atualizar leitura agora",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.cancel",
+        "title": "Cancelar tarefa em execução",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.runTaskNow",
+        "title": "Executar agora",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.editTask",
+        "title": "Editar",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.priorityUp",
+        "title": "Subir prioridade",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.priorityDown",
+        "title": "Descer prioridade",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.removeTask",
+        "title": "Remover",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.retryTask",
+        "title": "Tentar de novo",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.showResult",
+        "title": "Ver resultado",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.showLog",
+        "title": "Ver log",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.showDiff",
+        "title": "Ver diff",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.checkout",
+        "title": "Fazer checkout da branch",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.deleteBranch",
+        "title": "Apagar branch",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.connectPanel",
+        "title": "Conectar ao painel do Claude Code",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.disconnectPanel",
+        "title": "Desconectar do painel do Claude Code",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.showFailureReport",
+        "title": "Ver relatório da falha",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.skipInBatch",
+        "title": "Pular no lote",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.cancelBatch",
+        "title": "Cancelar lote",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.showBatchReport",
+        "title": "Ver relatório do lote",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.showBatchDiff",
+        "title": "Ver diff do lote",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.checkoutBatch",
+        "title": "Fazer checkout da branch do lote",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.clearHistory",
+        "title": "Limpar histórico…",
+        "category": "Claude in Line",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "claudeQueue.emptyArchive",
+        "title": "Esvaziar arquivo",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.showBatchAnalysis",
+        "title": "Ver análise do lote",
+        "category": "Claude in Line"
+      },
+      {
+        "command": "claudeQueue.copyPrDescription",
+        "title": "Copiar descrição de PR",
+        "category": "Claude in Line"
+      }
+    ],
+    "configuration": {
+      "title": "Claude in Line",
+      "properties": {
+        "claudeQueue.intervalMinutes": {
+          "type": "number",
+          "default": 20,
+          "minimum": 1,
+          "markdownDescription": "Intervalo do agendador interno, em minutos. O ciclo só roda com o VS Code aberto."
+        },
+        "claudeQueue.reservePct": {
+          "type": "number",
+          "default": 25,
+          "minimum": 0,
+          "maximum": 100,
+          "markdownDescription": "Porcentagem da janela semanal que a fila nunca usa, reservada ao seu uso manual."
+        },
+        "claudeQueue.dailyBudget.mode": {
+          "type": "string",
+          "enum": [
+            "dynamic",
+            "fixed"
+          ],
+          "default": "dynamic",
+          "markdownEnumDescriptions": [
+            "Divide o que sobra da semana pelos dias até o reset. O uso manual conta no orçamento do dia.",
+            "Usa sempre `claudeQueue.dailyBudget.fixedPct` por dia."
+          ],
+          "markdownDescription": "Como calcular o orçamento de cada dia."
+        },
+        "claudeQueue.dailyBudget.fixedPct": {
+          "type": "number",
+          "default": 15,
+          "minimum": 0,
+          "maximum": 100,
+          "markdownDescription": "Orçamento diário em pontos percentuais da semana. Usado só no modo `fixed`."
+        },
+        "claudeQueue.fiveHourMaxPct": {
+          "type": "number",
+          "default": 60,
+          "minimum": 0,
+          "maximum": 100,
+          "markdownDescription": "A fila não inicia uma tarefa se a janela de 5h estiver acima disso."
+        },
+        "claudeQueue.allowedHours": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 24
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "markdownDescription": "Faixas de hora em que a fila pode rodar, ex.: `[[0,7],[12,14]]`. Vazio = qualquer hora."
+        },
+        "claudeQueue.weekdayOverrides": {
+          "type": "array",
+          "default": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "items": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "minItems": 7,
+          "maxItems": 7,
+          "markdownDescription": "Ajuste por dia da semana (posição 0 = domingo … 6 = sábado): horário e/ou % da semana que a fila pode usar naquele dia, por cima do geral. Editar pela tela de configurações, seção **Por dia da semana** — não é para mexer aqui direto."
+        },
+        "claudeQueue.maxTasksPerRun": {
+          "type": "number",
+          "default": 3,
+          "minimum": 1,
+          "markdownDescription": "Máximo de tarefas por ciclo. Sem calibração do medidor, é sempre 1."
+        },
+        "claudeQueue.branchTemplate": {
+          "type": "string",
+          "default": "Dev_Branches/{data}/{slug}",
+          "markdownDescription": "Modelo do nome da branch de cada tarefa. Marcadores: `{data}` (2026-09-29), `{hora}` (2053), `{repo}`, `{slug}` (o título, normalizado) e `{id}`.\n\nA `/` cria níveis: o VS Code e o git mostram isso como árvore de pastas. A data é a da execução, porque é quando a branch nasce."
+        },
+        "claudeQueue.retencaoDias": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "markdownDescription": "Arquivar sozinho, em `~/.cq/arquivo`, o histórico com mais de N dias: tarefas concluídas, com falha e lotes encerrados. **0 desliga.** Só arquiva, nunca apaga; lote em andamento ou bloqueado nunca é tocado."
+        },
+        "claudeQueue.onWarning": {
+          "type": "string",
+          "enum": [
+            "finish",
+            "abort"
+          ],
+          "default": "finish",
+          "markdownEnumDescriptions": [
+            "Termina a tarefa em andamento e pausa a fila.",
+            "Interrompe a tarefa na hora e pausa a fila."
+          ],
+          "markdownDescription": "O que fazer quando o Claude Code avisar que o limite está perto."
+        },
+        "claudeQueue.defaults.model": {
+          "type": "string",
+          "default": "sonnet",
+          "markdownDescription": "Modelo padrão das tarefas novas."
+        },
+        "claudeQueue.defaults.maxTurns": {
+          "type": "number",
+          "default": 40,
+          "minimum": 1,
+          "markdownDescription": "Limite de turnos padrão de cada tarefa."
+        },
+        "claudeQueue.defaults.timeoutMin": {
+          "type": "number",
+          "default": 45,
+          "minimum": 1,
+          "markdownDescription": "Tempo máximo de cada tarefa, em minutos."
+        },
+        "claudeQueue.defaults.allowedTools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "Read",
+            "Edit",
+            "Write",
+            "Glob",
+            "Grep",
+            "Bash(git status:*)",
+            "Bash(git diff:*)",
+            "Bash(git log:*)",
+            "Bash(mvn -q test:*)"
+          ],
+          "markdownDescription": "Ferramentas liberadas por padrão. A fila roda em `dontAsk`: o que não estiver aqui é negado."
+        },
+        "claudeQueue.claudePath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Caminho do executável `claude`. Vazio = autodetectar com `where claude`."
+        },
+        "claudeQueue.dataDir": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Pasta de dados, compartilhada com a CLI `cq`. Vazio = `~/.cq`. Mudar exige recarregar a janela."
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "claudeQueue",
+          "title": "Claude in Line",
+          "icon": "media/queue.svg"
+        }
+      ]
+    },
+    "views": {
+      "claudeQueue": [
+        {
+          "id": "claudeQueue.tasks",
+          "name": "Fila",
+          "icon": "media/queue.svg"
+        }
+      ]
+    },
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "claudeQueue.runTaskNow",
+          "when": "false"
+        },
+        {
+          "command": "claudeQueue.editTask",
+          "when": "false"
+        },
+        {
+          "command": "claudeQueue.priorityUp",
+          "when": "false"
+        },
+        {
+          "command": "claudeQueue.priorityDown",
+          "when": "false"
+        },
+        {
+          "command": "claudeQueue.removeTask",
+          "when": "false"
+        },
+        {
+          "command": "claudeQueue.retryTask",
+          "when": "false"
+        },
+        {
+          "command": "claudeQueue.showResult",
+          "when": "false"
+        },
+        {
+          "command": "claudeQueue.showLog",
+          "when": "false"
+        },
+        {
+          "command": "claudeQueue.showDiff",
+          "when": "false"
+        },
+        {
+          "command": "claudeQueue.checkout",
+          "when": "false"
+        },
+        {
+          "command": "claudeQueue.deleteBranch",
+          "when": "false"
+        },
+        {
+          "command": "claudeQueue.showFailureReport",
+          "when": "false"
+        },
+        {
+          "command": "claudeQueue.skipInBatch",
+          "when": "false"
+        },
+        {
+          "command": "claudeQueue.cancelBatch",
+          "when": "false"
+        },
+        {
+          "command": "claudeQueue.showBatchReport",
+          "when": "false"
+        },
+        {
+          "command": "claudeQueue.showBatchDiff",
+          "when": "false"
+        },
+        {
+          "command": "claudeQueue.checkoutBatch",
+          "when": "false"
+        },
+        {
+          "command": "claudeQueue.showBatchAnalysis",
+          "when": "false"
+        },
+        {
+          "command": "claudeQueue.copyPrDescription",
+          "when": "false"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "claudeQueue.addTask",
+          "when": "view == claudeQueue.tasks",
+          "group": "navigation@1"
+        },
+        {
+          "command": "claudeQueue.runNow",
+          "when": "view == claudeQueue.tasks",
+          "group": "navigation@2"
+        },
+        {
+          "command": "claudeQueue.pause",
+          "when": "view == claudeQueue.tasks && !claudeQueue.paused",
+          "group": "navigation@3"
+        },
+        {
+          "command": "claudeQueue.resume",
+          "when": "view == claudeQueue.tasks && claudeQueue.paused",
+          "group": "navigation@3"
+        },
+        {
+          "command": "claudeQueue.refresh",
+          "when": "view == claudeQueue.tasks",
+          "group": "navigation@4"
+        },
+        {
+          "command": "claudeQueue.showStatus",
+          "when": "view == claudeQueue.tasks",
+          "group": "1_status@1"
+        },
+        {
+          "command": "claudeQueue.setupMeter",
+          "when": "view == claudeQueue.tasks",
+          "group": "1_status@2"
+        },
+        {
+          "command": "claudeQueue.refreshReading",
+          "when": "view == claudeQueue.tasks",
+          "group": "1_status@3"
+        },
+        {
+          "command": "claudeQueue.openDataFolder",
+          "when": "view == claudeQueue.tasks",
+          "group": "9_outros@1"
+        },
+        {
+          "command": "claudeQueue.openSettings",
+          "when": "view == claudeQueue.tasks",
+          "group": "navigation@5"
+        },
+        {
+          "command": "claudeQueue.connectPanel",
+          "when": "view == claudeQueue.tasks",
+          "group": "1_status@4"
+        },
+        {
+          "command": "claudeQueue.clearHistory",
+          "when": "view == claudeQueue.tasks",
+          "group": "3_limpar@1"
+        },
+        {
+          "command": "claudeQueue.emptyArchive",
+          "when": "view == claudeQueue.tasks",
+          "group": "3_limpar@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "claudeQueue.runTaskNow",
+          "when": "viewItem == tarefa:queued",
+          "group": "1_acao@1"
+        },
+        {
+          "command": "claudeQueue.editTask",
+          "when": "viewItem =~ /^tarefa:queued/",
+          "group": "1_acao@2"
+        },
+        {
+          "command": "claudeQueue.priorityUp",
+          "when": "viewItem == tarefa:queued",
+          "group": "2_ordem@1"
+        },
+        {
+          "command": "claudeQueue.priorityDown",
+          "when": "viewItem == tarefa:queued",
+          "group": "2_ordem@2"
+        },
+        {
+          "command": "claudeQueue.removeTask",
+          "when": "viewItem =~ /^tarefa:queued/",
+          "group": "9_remover@1"
+        },
+        {
+          "command": "claudeQueue.cancel",
+          "when": "viewItem =~ /^tarefa:running/",
+          "group": "1_acao@1"
+        },
+        {
+          "command": "claudeQueue.showResult",
+          "when": "viewItem =~ /^tarefa:done/",
+          "group": "1_ver@1"
+        },
+        {
+          "command": "claudeQueue.showDiff",
+          "when": "viewItem =~ /^tarefa:done/",
+          "group": "1_ver@2"
+        },
+        {
+          "command": "claudeQueue.checkout",
+          "when": "viewItem == tarefa:done",
+          "group": "2_branch@1"
+        },
+        {
+          "command": "claudeQueue.deleteBranch",
+          "when": "viewItem == tarefa:done",
+          "group": "2_branch@2"
+        },
+        {
+          "command": "claudeQueue.showResult",
+          "when": "viewItem =~ /^tarefa:failed/",
+          "group": "1_ver@1"
+        },
+        {
+          "command": "claudeQueue.showLog",
+          "when": "viewItem =~ /^tarefa:failed/",
+          "group": "1_ver@2"
+        },
+        {
+          "command": "claudeQueue.retryTask",
+          "when": "viewItem =~ /^tarefa:failed/",
+          "group": "2_acao@1"
+        },
+        {
+          "command": "claudeQueue.removeTask",
+          "when": "viewItem == tarefa:failed",
+          "group": "9_remover@1"
+        },
+        {
+          "command": "claudeQueue.showFailureReport",
+          "when": "viewItem =~ /^tarefa:failed/",
+          "group": "1_ver@0"
+        },
+        {
+          "command": "claudeQueue.skipInBatch",
+          "when": "viewItem == tarefa:failed:lote",
+          "group": "2_acao@2"
+        },
+        {
+          "command": "claudeQueue.cancelBatch",
+          "when": "viewItem == tarefa:failed:lote",
+          "group": "2_acao@3"
+        },
+        {
+          "command": "claudeQueue.showBatchReport",
+          "when": "viewItem =~ /^lote:/",
+          "group": "1_ver@1"
+        },
+        {
+          "command": "claudeQueue.showBatchDiff",
+          "when": "viewItem =~ /^lote:/",
+          "group": "1_ver@2"
+        },
+        {
+          "command": "claudeQueue.checkoutBatch",
+          "when": "viewItem =~ /^lote:/",
+          "group": "2_branch@1"
+        },
+        {
+          "command": "claudeQueue.cancelBatch",
+          "when": "viewItem =~ /^lote:(andamento|bloqueado)$/",
+          "group": "9_remover@1"
+        },
+        {
+          "command": "claudeQueue.showBatchAnalysis",
+          "when": "viewItem =~ /^lote:/",
+          "group": "1_ver@0"
+        },
+        {
+          "command": "claudeQueue.copyPrDescription",
+          "when": "viewItem =~ /^lote:/",
+          "group": "1_ver@3"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "check": "tsc --noEmit",
+    "test": "node --test \"test/**/*.test.js\"",
+    "package": "npm run check && npm run build && npx @vscode/vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.2.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.5.0"
+  }
+}

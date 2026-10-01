@@ -1,0 +1,12 @@
+.vscode/**
+src/**
+test/**
+out-tsc/**
+node_modules/**
+esbuild.mjs
+tsconfig.json
+package-lock.json
+**/*.map
+.gitignore
+out/core.js
+ROTEIRO-DE-TESTE.md
