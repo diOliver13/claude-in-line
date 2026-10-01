@@ -45,8 +45,7 @@ claude install
 Se o `claude` ainda não estiver no PATH, chame o embutido pelo caminho completo uma única vez:
 
 ```powershell
-& "$env:USERPROFILE.vscodeextensionsanthropic.claude-code-*esources
-ative-binaryclaude.exe" install
+& "$env:USERPROFILE\.vscode\extensions\anthropic.claude-code-*\resources\native-binary\claude.exe" install
 ```
 
 Depois feche e reabra o terminal. **Claude in Line: Mostrar status** diz qual executável a fila vai

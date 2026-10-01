@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-01 — 0.2.1: primeira publicação pública
+
+- **Comando corrompido no README corrigido.** O caminho do `claude.exe` embutido, na seção
+  "Sobre o executável do `claude`", tinha perdido as barras invertidas e ganhado uma quebra de
+  linha no meio — rodar como estava não funcionava.
+
 ## 2026-09-30 (noite) — limite por dia da semana
 
 - **Tela de configurações ganhou a seção "Por dia da semana"**: segunda a domingo, cada dia aceita
