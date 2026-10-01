@@ -10,3 +10,4 @@ package-lock.json
 .gitignore
 out/core.js
 ROTEIRO-DE-TESTE.md
+.github/**
