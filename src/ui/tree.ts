@@ -1,5 +1,6 @@
 import * as path from "path";
 import * as vscode from "vscode";
+import { ItemArquivado, listarArquivados } from "../core/limpeza";
 import { Lote, listarLotes, tarefasDoLote } from "../core/lote";
 import { Task, listTasks } from "../core/queue";
 import { Engine } from "../services/engine";
@@ -7,11 +8,12 @@ import { LedgerEntry, ledgerById } from "../services/store";
 
 const MAX_CONCLUIDAS = 20;
 const MAX_LOTES = 10;
+const MAX_ARQUIVADOS = 50;
 
 export type Grupo = "queued" | "running" | "done" | "failed";
 
 export class GroupItem extends vscode.TreeItem {
-  constructor(readonly grupo: Grupo | "lotes", rotulo: string, quantidade: number) {
+  constructor(readonly grupo: Grupo | "lotes" | "arquivo", rotulo: string, quantidade: number) {
     super(`${rotulo} (${quantidade})`, vscode.TreeItemCollapsibleState.Expanded);
     this.contextValue = `grupo:${grupo}`;
   }
@@ -68,6 +70,36 @@ export class LoteItem extends vscode.TreeItem {
     if (lote.bloqueio) m.appendMarkdown(`---\n\nParou em **${lote.bloqueio.titulo}**: ${lote.bloqueio.motivo}`);
     this.tooltip = m;
     this.command = { command: "claudeQueue.showBatchReport", title: "Ver relatório do lote", arguments: [this] };
+  }
+}
+
+const ROTULO_CATEGORIA: Record<ItemArquivado["categoria"], string> = {
+  concluidas: "concluída",
+  falhas: "com falha",
+  pendentes: "pendente",
+  lotes: "lote",
+};
+
+const ICONE_CATEGORIA: Record<ItemArquivado["categoria"], string> = {
+  concluidas: "check",
+  falhas: "error",
+  pendentes: "circle-outline",
+  lotes: "layers",
+};
+
+/** Só leitura: o item já saiu da fila, não há ação de tarefa que faça sentido nele. */
+export class ArquivadoItem extends vscode.TreeItem {
+  constructor(readonly item: ItemArquivado) {
+    super(item.titulo, vscode.TreeItemCollapsibleState.None);
+    this.contextValue = "arquivado";
+    this.description = `${ROTULO_CATEGORIA[item.categoria]} · ${item.data}`;
+    this.iconPath = new vscode.ThemeIcon(ICONE_CATEGORIA[item.categoria], new vscode.ThemeColor("descriptionForeground"));
+    const m = new vscode.MarkdownString();
+    m.appendMarkdown(`**${item.titulo}**\n\n${ROTULO_CATEGORIA[item.categoria]} · arquivada em ${item.data}`);
+    if (item.branches.length) {
+      m.appendMarkdown(`\n\n${item.branches.map((b) => `\`${b.branch}\` em \`${b.repo}\``).join("\n\n")}`);
+    }
+    this.tooltip = m;
   }
 }
 
@@ -137,6 +169,7 @@ export class QueueTree implements vscode.TreeDataProvider<vscode.TreeItem>, vsco
         new GroupItem("running", "Em execução", rodando ? 1 : 0),
         new GroupItem("done", "Concluídas", Math.min(listTasks(cfg, "done").filter(avulsa).length, MAX_CONCLUIDAS)),
         new GroupItem("failed", "Com falha", listTasks(cfg, "failed").filter(avulsa).length),
+        new GroupItem("arquivo", "Arquivo", listarArquivados(MAX_ARQUIVADOS).length),
       ];
     }
 
@@ -175,6 +208,8 @@ export class QueueTree implements vscode.TreeDataProvider<vscode.TreeItem>, vsco
           .sort((a, b) => b.created - a.created)
           .slice(0, MAX_CONCLUIDAS)
           .map((t) => new TaskItem(t, "done", ledger.get(t.id)));
+      case "arquivo":
+        return listarArquivados(MAX_ARQUIVADOS).map((i) => new ArquivadoItem(i));
     }
   }
 

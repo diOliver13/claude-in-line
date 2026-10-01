@@ -129,6 +129,38 @@ test("arquivar duas vezes no mesmo dia não sobrescreve", (t) => {
   assert.deepStrictEqual(done, ["mesma.md", "mesma.md-2"]);
 });
 
+test("listarArquivados: lê os manifestos, mais recente primeiro, sem reler .md", (t) => {
+  const { env, repo, cfg } = cenario(t);
+  tarefa(env, repo, { id: "ontem", status: "done", fim: agora - DIA });
+  core.executarLimpeza(core.planejarLimpeza(cfg, ["concluidas"]), "arquivar", new Date(2026, 8, 29, 10, 0, 0));
+  tarefa(env, repo, { id: "hoje", status: "failed" });
+  core.executarLimpeza(core.planejarLimpeza(cfg, ["falhas"]), "arquivar", new Date(2026, 8, 30, 11, 0, 0));
+
+  const itens = core.listarArquivados();
+  assert.deepStrictEqual(
+    itens.map((i) => [i.id, i.categoria, i.data]),
+    [
+      ["hoje", "falhas", "2026-09-30"],
+      ["ontem", "concluidas", "2026-09-29"],
+    ]
+  );
+  assert.strictEqual(itens[0].titulo, "Tarefa hoje");
+});
+
+test("listarArquivados: respeita o limite", (t) => {
+  const { env, repo, cfg } = cenario(t);
+  for (const id of ["a", "b", "c"]) tarefa(env, repo, { id, status: "done" });
+  core.executarLimpeza(core.planejarLimpeza(cfg, ["concluidas"]), "arquivar", new Date(2026, 8, 30, 10, 0, 0));
+
+  assert.strictEqual(core.listarArquivados(2).length, 2);
+  assert.strictEqual(core.listarArquivados().length, 3);
+});
+
+test("listarArquivados: sem nada arquivado, devolve vazio sem quebrar", (t) => {
+  cenario(t);
+  assert.deepStrictEqual(core.listarArquivados(), []);
+});
+
 test("apagar: some de vez, sem criar arquivo", (t) => {
   const { env, repo, cfg } = cenario(t);
   tarefa(env, repo, { id: "feita", status: "done" });

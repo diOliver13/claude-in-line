@@ -302,6 +302,11 @@ não. Com a fila executando, a limpeza espera. **Esvaziar arquivo** apaga o que 
 Para não precisar lembrar, `claudeQueue.retencaoDias` arquiva sozinho, uma vez por dia, o que tiver
 mais de N dias. O padrão é 0, desligado.
 
+**Grupo Arquivo**, abaixo de Com falha na árvore, mostra os últimos 50 itens arquivados (manual ou
+pela retenção), mais recente primeiro — título, se era concluída/com falha/pendente/lote, e a data
+em que saiu. Só para consultar: sem ação nenhuma, já que o item não está mais na fila. Para abrir o
+que ficou (o `.md`, o resultado, o relatório do lote), vá até `~/.cq/arquivo/<data>/`.
+
 ## Revisando o que a fila fez
 
 Menu de contexto na tarefa concluída:

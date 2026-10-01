@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-01 (noite) — 0.2.2: grupo Arquivo na árvore
+
+- **Grupo Arquivo, abaixo de Com falha.** Até aqui, consultar o que foi arquivado (pela limpeza
+  manual ou pela retenção automática) exigia abrir `~/.cq/arquivo/<data>/` no explorador — pedido
+  depois de usar a limpeza pela primeira vez e não achar onde ver o resultado dentro do próprio
+  painel. Mostra os últimos 50 itens, mais recente primeiro, lendo os manifestos
+  `limpeza-<hora>.json` que a limpeza já grava — sem reabrir `.md` nenhum. Só leitura: o item já
+  saiu da fila, não há ação que faça sentido nele ali.
+
 ## 2026-10-01 — 0.2.1: primeira publicação pública
 
 - **Comando corrompido no README corrigido.** O caminho do `claude.exe` embutido, na seção

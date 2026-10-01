@@ -201,6 +201,55 @@ export function executarLimpeza(itens: ItemDeLimpeza[], modo: "arquivar" | "apag
   }
 }
 
+export interface ItemArquivado {
+  tipo: "tarefa" | "lote";
+  id: string;
+  titulo: string;
+  categoria: Categoria;
+  /** Pasta de data onde esse item caiu, ex. "2026-10-01". */
+  data: string;
+  branches: BranchDaFila[];
+}
+
+/**
+ * Para exibir o que já foi arquivado, sem reler `.md`: cada leva de
+ * `executarLimpeza`/`aplicarRetencao` já grava um `limpeza-<hora>.json` com
+ * título, categoria e tipo de cada item. Mais recente primeiro.
+ */
+export function listarArquivados(limite = 50): ItemArquivado[] {
+  let dias: string[] = [];
+  try {
+    dias = fs.readdirSync(P.arquivo).filter((d) => existe(path.join(P.arquivo, d)));
+  } catch {
+    return [];
+  }
+  dias.sort().reverse();
+
+  const out: ItemArquivado[] = [];
+  for (const d of dias) {
+    let manifestos: string[] = [];
+    try {
+      manifestos = fs.readdirSync(path.join(P.arquivo, d)).filter((f) => /^limpeza-\d+\.json$/.test(f));
+    } catch {
+      continue;
+    }
+    manifestos.sort().reverse();
+    for (const m of manifestos) {
+      let conteudo: { itens?: Omit<ItemArquivado, "data">[] };
+      try {
+        conteudo = JSON.parse(fs.readFileSync(path.join(P.arquivo, d, m), "utf8"));
+      } catch {
+        continue;
+      }
+      for (const item of conteudo.itens || []) {
+        out.push({ ...item, data: d });
+        if (out.length >= limite) return out;
+      }
+    }
+  }
+  return out;
+}
+
 /** Esvaziar o arquivo: o que já foi arquivado some de vez. */
 export function esvaziarArquivo(): number {
   let dias: string[] = [];
