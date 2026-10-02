@@ -2,7 +2,7 @@
   "name": "claude-queue",
   "displayName": "Claude in Line",
   "description": "Fila de tarefas de desenvolvimento para o Claude Code que só executa quando há cota sobrando no plano.",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "publisher": "claude-in-line-dev",
   "license": "MIT",
   "repository": {

@@ -189,6 +189,26 @@ function branchLivre(repo: string, nome: string): string {
   return `${nome}-r${Date.now() % 100000}`;
 }
 
+/**
+ * Resíduo de uma tentativa anterior DESTA MESMA tarefa -- o caminho é
+ * derivado do id, então nunca pertence a outra. `finishWorktree` já tenta
+ * remover ao final; isto é o reforço para quando aquele `git worktree
+ * remove` falha em silêncio (visto no Windows, com um processo recém-morto
+ * ainda segurando um identificador de arquivo) e um "Tentar de novo" bate
+ * em "already exists" sem explicação nenhuma.
+ */
+function limparResiduoSeExistir(repo: string, dir: string): void {
+  if (!fs.existsSync(dir)) return;
+  log(`worktree ${dir} já existia (sobra de uma tentativa anterior); limpando antes de tentar de novo`);
+  git(repo, ["worktree", "remove", "--force", dir]);
+  try {
+    fs.rmSync(dir, { recursive: true, force: true });
+  } catch (e) {
+    log(`não consegui limpar ${dir} de vez: ${e instanceof Error ? e.message : String(e)}`);
+  }
+  git(repo, ["worktree", "prune"]);
+}
+
 function prepareWorktree(task: Task, cfg: Config): Worktree {
   const top = git(task.repo, ["rev-parse", "--show-toplevel"]);
   if (!top.ok) throw new Error(`${task.repo} não é um repositório git`);
@@ -196,6 +216,7 @@ function prepareWorktree(task: Task, cfg: Config): Worktree {
   // A pasta da worktree é interna e compartilhada entre repositórios, então ela
   // fica com o nome do repositório e o id: único por construção.
   const dir = path.join(P.worktrees, `${path.basename(top.out)}-${task.id}`);
+  limparResiduoSeExistir(task.repo, dir);
 
   const lote = loteDaTarefa(task);
   if (lote) return worktreeDoLote(task, cfg, lote, top.out, dir);
@@ -285,7 +306,21 @@ function finishWorktree(task: Task, wt: Worktree, ok: boolean): Fechamento {
     commit = git(wt.dir, ["rev-parse", "HEAD"]).out || null;
   }
 
-  git(task.repo, ["worktree", "remove", "--force", wt.dir]);
+  const removido = git(task.repo, ["worktree", "remove", "--force", wt.dir]);
+  if (!removido.ok) {
+    // Acontece no Windows: o processo do claude acabou de morrer e algo (o
+    // antivírus, um handle que ainda não soltou) segura um arquivo por um
+    // instante. Sem isto, a pasta sobra e a PRÓXIMA tentativa desta tarefa
+    // falha com "already exists" -- limparResiduoSeExistir cobre esse caso
+    // de novo, mas tentar aqui evita precisar disso.
+    log(`não consegui remover a worktree ${wt.dir} (${removido.err}); tentando de novo na força`);
+    try {
+      fs.rmSync(wt.dir, { recursive: true, force: true });
+    } catch (e) {
+      log(`limpeza de ${wt.dir} falhou: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    git(task.repo, ["worktree", "prune"]);
+  }
   // Branch sem nenhuma alteração só polui o repositório. A do lote fica: ela é
   // do conjunto, e a próxima tarefa vai precisar dela.
   if (changed === 0 && !wt.lote) git(task.repo, ["branch", "-D", wt.branch]);

@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-02 (noite) — 0.2.4: "already exists" ao tentar de novo
+
+**Por que.** Uma tarefa de lote falhou por limite de 5h, deixou o trabalho parcial commitado numa
+branch à parte (como devia) e removeu a worktree — só que, no Windows, o processo do `claude`
+recém-morto ainda segurava um identificador de arquivo, e o `git worktree remove` falhou em
+silêncio. A pasta sobrou no disco. Horas depois, **Tentar de novo** batia em "already exists" sem
+explicação nenhuma, porque o caminho da worktree é fixo por id de tarefa.
+
+- **Falha ao remover a worktree agora aparece no log**, em vez de ser engolida, e a extensão tenta
+  de novo na força (`fs.rmSync` + `git worktree prune`) antes de desistir.
+- **Reforço na próxima tentativa:** se o caminho da worktree já existir de uma sobra assim, ela é
+  limpa automaticamente antes do `git worktree add` — então mesmo que a limpeza do fim tivesse
+  falhado, "Tentar de novo" (manual ou automático, da 0.2.3) não trava mais nisso.
+
 ## 2026-10-02 — 0.2.3: lote bloqueado por limite retoma sozinho
 
 **Por que.** Um lote travou na tarefa 3 de 6 porque o Claude Code recusou por limite da janela de

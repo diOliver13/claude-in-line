@@ -276,6 +276,26 @@ test("lote bloqueado por um problema de verdade (não limite) nunca retoma sozin
   assert.strictEqual(core.findTask(cfg, idB).status, "failed");
 });
 
+test("worktree que sobrou de uma tentativa anterior não trava a próxima", async (t) => {
+  const { env, repo, cfg } = cenario(t);
+  enfileirar(env, repo, { titulo: "Parte A", lote: "residuo", ordem: 1, corpo: "ARQUIVO: a.txt" });
+  const idB = enfileirar(env, repo, { titulo: "Parte B", lote: "residuo", ordem: 2, corpo: "ARQUIVO: b.txt" });
+  enfileirar(env, repo, { titulo: "Parte C", lote: "residuo", ordem: 3, corpo: "ARQUIVO: c.txt" });
+
+  // sobra de uma tentativa anterior de B: um "git worktree remove" que falhou
+  // em silêncio (visto no Windows) deixaria exatamente isto para trás.
+  const dirSobra = path.join(env.home, "worktrees", `${path.basename(repo)}-${idB}`);
+  fs.mkdirSync(dirSobra, { recursive: true });
+  fs.writeFileSync(path.join(dirSobra, "lixo.txt"), "sobra de uma execução anterior\n");
+
+  const eventos = await rodarAteParar(cfg);
+  const resultados = fins(eventos).map((e) => e.result);
+  assert.strictEqual(resultados.length, 3, resultados.map((r) => r.reason).join("; "));
+  assert.ok(resultados.every((r) => r.ok), "todas concluíram, inclusive B apesar da sobra");
+  assert.strictEqual(lerLote(env, "residuo").estado, "concluido");
+  assert.ok(!fs.existsSync(dirSobra), "a sobra foi limpa antes de usar o caminho de novo");
+});
+
 test("lote bloqueado: pular segue sem a tarefa; a que falhou não entra na branch", async (t) => {
   const { env, repo, cfg } = cenario(t);
   enfileirar(env, repo, { titulo: "Parte A", lote: "pula", ordem: 1, corpo: "ARQUIVO: a.txt" });
