@@ -228,6 +228,54 @@ test("lote: falha no meio bloqueia o resto, e o trabalho parcial fica fora da br
   assert.match(doLote, /\| 3 \| Parte C \| .* \| ⏸ parada \|/);
 });
 
+test("lote bloqueado só por limite: quando o freio passa, a tarefa volta sozinha", async (t) => {
+  const { env, repo, cfg } = cenario(t);
+  enfileirar(env, repo, { titulo: "Parte A", lote: "limite", ordem: 1, corpo: "ARQUIVO: a.txt" });
+  const idB = enfileirar(env, repo, { titulo: "Parte B", lote: "limite", ordem: 2, corpo: "ARQUIVO: b.txt\nMODO: rejected" });
+  enfileirar(env, repo, { titulo: "Parte C", lote: "limite", ordem: 3, corpo: "ARQUIVO: c.txt" });
+
+  await rodarAteParar(cfg);
+  assert.strictEqual(core.findTask(cfg, idB).status, "failed");
+  let lote = lerLote(env, "limite");
+  assert.strictEqual(lote.estado, "bloqueado");
+  assert.strictEqual(lote.bloqueio.tarefa, idB);
+  assert.strictEqual(lote.bloqueio.porLimite, true, "o Claude Code recusou por limite, não foi um problema da tarefa");
+
+  // o freio ainda vale: nada muda sozinho
+  assert.strictEqual(await core.runQueue(cfg, {}), 0);
+  assert.strictEqual(lerLote(env, "limite").estado, "bloqueado");
+
+  // a janela "zera": o freio deixa de valer
+  const estado = JSON.parse(fs.readFileSync(path.join(env.home, "state.json"), "utf8"));
+  delete estado.brake;
+  writeJson(path.join(env.home, "state.json"), estado);
+
+  // sem clicar em "Tentar de novo", o próximo ciclo já retoma sozinho
+  const eventos = [];
+  await core.runQueue(cfg, { onEvent: (e) => eventos.push(e) });
+  assert.ok(
+    eventos.some((e) => e.kind === "task-start" && e.task.id === idB),
+    "retomou a tarefa parada sem ação manual"
+  );
+});
+
+test("lote bloqueado por um problema de verdade (não limite) nunca retoma sozinho", async (t) => {
+  const { env, repo, cfg } = cenario(t);
+  enfileirar(env, repo, { titulo: "Parte A", lote: "quebra2", ordem: 1, corpo: "ARQUIVO: a.txt" });
+  const idB = enfileirar(env, repo, { titulo: "Parte B", lote: "quebra2", ordem: 2, corpo: "ARQUIVO: b.txt\nMODO: falha" });
+  enfileirar(env, repo, { titulo: "Parte C", lote: "quebra2", ordem: 3, corpo: "ARQUIVO: c.txt" });
+
+  await rodarAteParar(cfg);
+  const lote = lerLote(env, "quebra2");
+  assert.strictEqual(lote.estado, "bloqueado");
+  assert.ok(!lote.bloqueio.porLimite, "falha de teste comum não é bloqueio por limite");
+
+  // sem freio nenhum ativo, mesmo assim nada roda sozinho: só "Tentar de novo" decide
+  assert.strictEqual(await core.runQueue(cfg, {}), 0);
+  assert.strictEqual(lerLote(env, "quebra2").estado, "bloqueado");
+  assert.strictEqual(core.findTask(cfg, idB).status, "failed");
+});
+
 test("lote bloqueado: pular segue sem a tarefa; a que falhou não entra na branch", async (t) => {
   const { env, repo, cfg } = cenario(t);
   enfileirar(env, repo, { titulo: "Parte A", lote: "pula", ordem: 1, corpo: "ARQUIVO: a.txt" });

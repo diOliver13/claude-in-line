@@ -257,6 +257,13 @@ entrem no mesmo lote (o parâmetro `lote` do `enfileirar_tarefa`). Então:
    - **Pular no lote** — o lote segue sem ela.
    - **Cancelar lote** — nada mais roda; as pendentes vão para Com falha, e a branch fica com o que já foi commitado.
 
+**Exceção: bloqueio só por limite (janela de 5h ou semana) não espera você.** Quando o próprio
+Claude Code recusa a chamada por ter batido no teto — não um problema da tarefa — a fila sabe
+distinguir isso, e assim que o orçamento libera de novo ela já devolve a tarefa para a fila e
+destrava o lote sozinha, sem precisar de **Tentar de novo**. Bloqueio por qualquer outro motivo
+(teste quebrado, ferramenta negada, o que for) continua esperando sua decisão — é inevitável não
+dar pra saber, só pelo tipo de erro, se repetir o mesmo pedido resolve ou repete o problema.
+
 ### Revisando um lote
 
 O grupo **Lotes** mostra cada lote com as tarefas dentro, na ordem, com o commit de cada uma.

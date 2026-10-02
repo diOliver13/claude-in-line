@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-10-02 — 0.2.3: lote bloqueado por limite retoma sozinho
+
+**Por que.** Um lote travou na tarefa 3 de 6 porque o Claude Code recusou por limite da janela de
+5h. Mesmo depois de a janela zerar, ele continuou parado esperando **Tentar de novo** — e esse
+clique manual é exatamente o que o projeto existe para evitar.
+
+- **Bloqueio causado só pelo limite (não por um problema real da tarefa) retoma sozinho.** A fila
+  já sabia a diferença — é o mesmo sinal que pausa a fila inteira (`stopQueue`) — só não usava essa
+  informação para decidir sozinha. Agora, a cada ciclo, se o orçamento já libera de novo, a tarefa
+  parada volta para a fila e o lote é destravado, sem esperar o clique.
+- **Bloqueio por qualquer outro motivo continua manual.** Teste quebrado, ferramenta negada, o que
+  for: a fila genuinamente não tem como saber se repetir o pedido resolve ou repete o problema, e
+  errar para esse lado (esperar demais) é mais seguro que errar para o outro (repetir sozinha algo
+  que não era para repetir).
+- **Lotes bloqueados antes desta versão não ganham isso de graça** — o sinal só existe a partir de
+  agora; o antigo continua precisando do clique manual, uma vez.
+
 ## 2026-10-01 (noite) — 0.2.2: grupo Arquivo na árvore
 
 - **Grupo Arquivo, abaixo de Com falha.** Até aqui, consultar o que foi arquivado (pela limpeza

@@ -7,8 +7,10 @@ import { Decision, evaluate, setBrake } from "./gate";
 import {
   Lote,
   bloquearLote,
+  desbloquearLote,
   escreverRelatorioDoLote,
   lerLote,
+  listarLotes,
   loteDaTarefa,
   lotesParados,
   proximaTarefa,
@@ -894,12 +896,33 @@ function fecharNoLote(cfg: Config, task: Task, r: RunResult): void {
       motivo: r.reason,
       branchFalha: r.branchFalha ?? null,
       commitFalha: r.commitFalha ?? null,
+      porLimite: r.stopQueue,
       em: nowSec(),
     });
   }
   escreverRelatorioDoLote(cfg, task.lote);
   // A análise sai quando o lote termina: é o ponto em que alguém vai revisar.
   if (lerLote(task.lote)?.estado === "concluido") escreverAnaliseDoLote(cfg, task.lote);
+}
+
+/**
+ * Lote bloqueado só porque o Claude Code recusou por limite (não porque a
+ * tarefa teve um problema de verdade): com orçamento de novo, ela volta
+ * sozinha para a fila, sem esperar "Tentar de novo". Bloqueio por qualquer
+ * outro motivo (teste quebrado, ferramenta negada, o que for) nunca entra
+ * aqui -- só quem nasceu com `porLimite`, e só enquanto a tarefa ainda
+ * estiver em Com falha (se você já decidiu manualmente, isso não mexe).
+ */
+function retomarBloqueiosPorLimite(cfg: Config): void {
+  if (!evaluate(cfg).ok) return;
+  for (const lote of listarLotes()) {
+    if (lote.estado !== "bloqueado" || !lote.bloqueio?.porLimite) continue;
+    const tarefa = listTasks(cfg, "failed").find((t) => t.id === lote.bloqueio!.tarefa);
+    if (!tarefa) continue;
+    moveTask(tarefa, "queued");
+    desbloquearLote(lote.nome);
+    log(`lote ${lote.nome}: orçamento voltou, ${tarefa.id} retomada sozinha`);
+  }
 }
 
 export async function runQueue(cfg: Config, opts: QueueOptions): Promise<number> {
@@ -909,6 +932,7 @@ export async function runQueue(cfg: Config, opts: QueueOptions): Promise<number>
     emit({ kind: "busy" });
     return 0;
   }
+  retomarBloqueiosPorLimite(cfg);
   let ran = 0;
   let force = !!opts.force;
   try {

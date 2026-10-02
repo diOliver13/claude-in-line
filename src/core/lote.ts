@@ -33,6 +33,12 @@ export interface Bloqueio {
   branchFalha: string | null;
   /** O commit de verdade deixado em `branchFalha` -- ausente em lotes salvos antes deste campo existir. */
   commitFalha?: string | null;
+  /**
+   * Bloqueou porque o Claude Code recusou por limite (janela de 5h ou
+   * semana), não porque a tarefa teve um problema de verdade -- ausente em
+   * lotes salvos antes deste campo existir, e então nunca retomado sozinho.
+   */
+  porLimite?: boolean;
   em: number;
 }
 
