@@ -280,6 +280,9 @@ worktree numa branch em uso. Isso não é falha: a fila avisa no log e retoma qu
 Quando o lote termina, a notificação oferece **Ver análise do lote**. É o relatório para quem vai
 revisar e juntar:
 
+- **Linha do tempo**: uma linha por execução, com horário de início e fim, duração e resultado.
+  Uma nova tentativa aparece como outra linha, então dá para ver quanto tempo o lote ficou parado
+  entre uma e outra.
 - **Consumo**: por tarefa e somado — tokens (entrada, saída, cache, raciocínio), custo equivalente
   em API e **pontos estimados da semana e da janela de 5h**, pela mesma calibração do medidor. Ao
   lado, a variação medida da semana durante o lote, que inclui qualquer outro uso da conta.

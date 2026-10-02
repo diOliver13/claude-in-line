@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-02 (noite) — 0.2.5: horário de início e fim na análise do lote
+
+- **Seção "Linha do tempo" na análise do lote**: uma linha por execução, com início, fim, duração e
+  resultado. Antes só havia a duração de cada tarefa e o intervalo total do lote.
+- **Retentativas deixaram de sumir.** A análise lia só a última execução de cada tarefa; uma
+  tarefa que falhou por limite e rodou de novo horas depois aparecia como se tivesse rodado uma
+  vez. Agora cada tentativa é uma linha, e o "Tempo do lote" e o "Tempo de execução somado"
+  contam todas.
+- **Cada tarefa, em "O que cada tarefa fez", mostra início e fim** da execução que valeu, e de
+  qual tentativa ela foi.
+
 ## 2026-10-02 (noite) — 0.2.4: "already exists" ao tentar de novo
 
 **Por que.** Uma tarefa de lote falhou por limite de 5h, deixou o trabalho parcial commitado numa

@@ -73,6 +73,8 @@ export interface AnaliseDaTarefa {
   task: Task;
   situacao: "concluída" | "falhou" | "pulada" | "não rodou";
   ledger: LinhaDoLedger | null;
+  /** Todas as execuções, em ordem; a última é `ledger`. Mais de uma quando houve nova tentativa. */
+  execucoes: LinhaDoLedger[];
   duracao: number | null;
   tokens: { entrada: number; saida: number; cacheLido: number; cacheEscrito: number; raciocinio: number } | null;
   custo: number | null;
@@ -120,7 +122,12 @@ function resumoDaResposta(id: string): string {
 
 const n = (v: unknown) => (typeof v === "number" && isFinite(v) ? v : 0);
 
-export function analisarTarefa(lote: Lote, task: Task, ledger: LinhaDoLedger | null): AnaliseDaTarefa {
+export function analisarTarefa(
+  lote: Lote,
+  task: Task,
+  ledger: LinhaDoLedger | null,
+  execucoes: LinhaDoLedger[] = ledger ? [ledger] : []
+): AnaliseDaTarefa {
   const pulada = lote.puladas.includes(task.id);
   const situacao = pulada ? "pulada" : !ledger ? "não rodou" : ledger.ok ? "concluída" : "falhou";
   const u = ledger?.usage ?? null;
@@ -132,6 +139,7 @@ export function analisarTarefa(lote: Lote, task: Task, ledger: LinhaDoLedger | n
     task,
     situacao,
     ledger,
+    execucoes,
     duracao: ledger ? ledger.end - ledger.start : null,
     tokens: u
       ? {
@@ -161,6 +169,7 @@ function tokens(v: number): string {
 const dinheiro = (v: number | null) => (v === null ? "—" : `US$ ${v.toFixed(2)}`);
 const pontos = (v: number | null) => (v === null ? "—" : `${v.toFixed(1).replace(".", ",")} pp`);
 const duracao = (s: number | null) => (s === null ? "—" : fmtDuration(Math.max(0, s)));
+const quando = (ts: number) => new Date(ts * 1000).toLocaleString();
 const soma = <T>(xs: T[], f: (x: T) => number | null) => xs.reduce((a, x) => a + (f(x) ?? 0), 0);
 const algum = <T>(xs: T[], f: (x: T) => number | null) => xs.some((x) => f(x) !== null);
 const cmdCurto = (c: string) => c.replace(/`/g, "'").replace(/\s+/g, " ").slice(0, 120);
@@ -197,13 +206,17 @@ export interface Analise {
 export function analisarLote(cfg: Config, nome: string): Analise | null {
   const lote = lerLote(nome);
   if (!lote) return null;
-  const ultimas = new Map<string, LinhaDoLedger>();
-  for (const l of readJsonl<LinhaDoLedger>(P.ledger)) ultimas.set(l.id, l);
-  const tarefas = tarefasDoLote(cfg, nome).map((t) => analisarTarefa(lote, t, ultimas.get(t.id) ?? null));
+  const porId = new Map<string, LinhaDoLedger[]>();
+  for (const l of readJsonl<LinhaDoLedger>(P.ledger)) porId.set(l.id, [...(porId.get(l.id) ?? []), l]);
+  const tarefas = tarefasDoLote(cfg, nome).map((t) => {
+    const execucoes = (porId.get(t.id) ?? []).sort((a, b) => a.start - b.start);
+    return analisarTarefa(lote, t, execucoes[execucoes.length - 1] ?? null, execucoes);
+  });
   const rodaram = tarefas.filter((t) => t.ledger);
+  const todasExecucoes = tarefas.flatMap((t) => t.execucoes);
 
-  const inicio = rodaram.length ? Math.min(...rodaram.map((t) => t.ledger!.start)) : null;
-  const fim = rodaram.length ? Math.max(...rodaram.map((t) => t.ledger!.end)) : null;
+  const inicio = todasExecucoes.length ? Math.min(...todasExecucoes.map((e) => e.start)) : null;
+  const fim = todasExecucoes.length ? Math.max(...todasExecucoes.map((e) => e.end)) : null;
   const todasAlteracoes = tarefas.flatMap((t) => t.alteracoes);
   const geral = lote.branch ? git(lote.repo, ["diff", "--shortstat", `${lote.base}...${lote.branch}`]) : null;
   const medida = inicio !== null && fim !== null ? variacaoMedida(inicio, fim) : null;
@@ -218,8 +231,8 @@ export function analisarLote(cfg: Config, nome: string): Analise | null {
   // ---------- resumo ----------
   L.push("## Resumo", "", "| | |", "|---|---|");
   L.push(`| Tarefas | ${tarefas.length} (${tarefas.filter((t) => t.situacao === "concluída").length} concluídas, ${tarefas.filter((t) => t.situacao === "falhou").length} com falha, ${tarefas.filter((t) => t.situacao === "pulada").length} puladas) |`);
-  L.push(`| Tempo do lote | ${inicio !== null && fim !== null ? `${duracao(fim - inicio)} (de ${new Date(inicio * 1000).toLocaleString()} a ${new Date(fim * 1000).toLocaleString()})` : "—"} |`);
-  L.push(`| Tempo de execução somado | ${duracao(soma(rodaram, (t) => t.duracao))} |`);
+  L.push(`| Tempo do lote | ${inicio !== null && fim !== null ? `${duracao(fim - inicio)} (de ${quando(inicio)} a ${quando(fim)})` : "—"} |`);
+  L.push(`| Tempo de execução somado | ${duracao(soma(todasExecucoes, (e) => e.end - e.start))} |`);
   L.push(`| Commits | ${Object.keys(lote.commits).length} |`);
   L.push(`| Alterações | ${geral || `${new Set(todasAlteracoes.map((a) => a.arquivo)).size} arquivo(s)`} |`);
   L.push(`| Custo equivalente em API | ${dinheiro(algum(rodaram, (t) => t.custo) ? soma(rodaram, (t) => t.custo) : null)} |`);
@@ -228,6 +241,23 @@ export function analisarLote(cfg: Config, nome: string): Analise | null {
     `| Limite da semana, medido | ${medida ? `${medida.antes.toFixed(1)}% → ${medida.depois.toFixed(1)}% (${pontos(medida.depois - medida.antes)}; inclui outro uso da conta no período)` : "sem leituras do medidor antes e depois do lote"} |`
   );
   L.push("");
+
+  // ---------- linha do tempo ----------
+  // Uma linha por execução, não por tarefa: uma nova tentativa aparece como
+  // outra linha, e o intervalo entre elas mostra quanto tempo o lote esperou.
+  if (todasExecucoes.length) {
+    L.push("## Linha do tempo", "", "| # | Tarefa | Início | Fim | Duração | Resultado |", "|---|---|---|---|---|---|");
+    const linhas = tarefas
+      .flatMap((t) => t.execucoes.map((e, i) => ({ t, e, tentativa: i + 1, total: t.execucoes.length })))
+      .sort((a, b) => a.e.start - b.e.start);
+    for (const { t, e, tentativa, total } of linhas) {
+      const rotulo = total > 1 ? `${t.task.title} (tentativa ${tentativa})` : t.task.title;
+      L.push(
+        `| ${t.task.ordem} | ${rotulo} | ${quando(e.start)} | ${quando(e.end)} | ${duracao(e.end - e.start)} | ${e.ok ? "✓ concluída" : `✗ ${e.reason}`} |`
+      );
+    }
+    L.push("");
+  }
 
   // ---------- consumo ----------
   L.push("## Consumo por tarefa", "");
@@ -289,6 +319,10 @@ export function analisarLote(cfg: Config, nome: string): Analise | null {
     const commit = lote.commits[t.task.id];
     L.push(`### ${t.task.ordem}. ${t.task.title}`, "");
     L.push(`${t.situacao} · ${t.task.model}${commit ? ` · commit \`${commit.slice(0, 7)}\`` : ""}${t.ledger ? ` · ${t.ledger.turns ?? "?"} turnos` : ""}`, "");
+    if (t.ledger) {
+      const tentativas = t.execucoes.length > 1 ? ` (${t.execucoes.length}ª tentativa)` : "";
+      L.push(`Início ${quando(t.ledger.start)} · fim ${quando(t.ledger.end)} · ${duracao(t.duracao)}${tentativas}`, "");
+    }
     if (t.resumo) L.push(t.resumo.split("\n").map((l) => `> ${l}`).join("\n"), "");
     if (t.alteracoes.length) {
       L.push("Arquivos:", "");
