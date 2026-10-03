@@ -38,7 +38,7 @@ export function mostrarStatus(engine: Engine, store: Store, saida: vscode.Output
   const L = (t = "") => saida.appendLine(t);
 
   saida.clear();
-  L(`Claude in Line — ${new Date().toLocaleString()}`);
+  L(`Claude in Line — ${new Date().toLocaleString("pt-BR")}`);
   L(`Pasta de dados: ${getHome()}`);
   L();
   L("Uso do plano");

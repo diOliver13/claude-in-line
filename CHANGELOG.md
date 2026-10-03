@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-03 (manhã) — 0.2.7: linha do tempo legível
+
+- **Motivo de falha com quebra de linha desmontava a tabela** da linha do tempo — o "already exists"
+  do git vem em duas linhas. Quebras viram espaço e `|` é escapado dentro das células.
+- **Datas no formato brasileiro** na análise, no relatório de falha e no status. Saíam no formato
+  americano (`10/2/2026, 1:38:47 PM`), porque o Node do VS Code não herda o idioma do Windows.
+
 ## 2026-10-03 — 0.2.6: o que a tarefa deixa rodando morre com ela
 
 **Por que.** A 0.2.4 tratou a pasta da worktree que sobrava como acaso do Windows. Não era: de 12

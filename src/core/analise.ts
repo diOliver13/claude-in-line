@@ -169,7 +169,9 @@ function tokens(v: number): string {
 const dinheiro = (v: number | null) => (v === null ? "—" : `US$ ${v.toFixed(2)}`);
 const pontos = (v: number | null) => (v === null ? "—" : `${v.toFixed(1).replace(".", ",")} pp`);
 const duracao = (s: number | null) => (s === null ? "—" : fmtDuration(Math.max(0, s)));
-const quando = (ts: number) => new Date(ts * 1000).toLocaleString();
+const quando = (ts: number) => new Date(ts * 1000).toLocaleString("pt-BR");
+/** Texto que vai dentro de uma célula de tabela: quebra de linha ou `|` desmontam a tabela. */
+const celula = (s: string) => s.replace(/\s*\r?\n\s*/g, " ").replace(/\|/g, "\\|");
 const soma = <T>(xs: T[], f: (x: T) => number | null) => xs.reduce((a, x) => a + (f(x) ?? 0), 0);
 const algum = <T>(xs: T[], f: (x: T) => number | null) => xs.some((x) => f(x) !== null);
 const cmdCurto = (c: string) => c.replace(/`/g, "'").replace(/\s+/g, " ").slice(0, 120);
@@ -253,7 +255,7 @@ export function analisarLote(cfg: Config, nome: string): Analise | null {
     for (const { t, e, tentativa, total } of linhas) {
       const rotulo = total > 1 ? `${t.task.title} (tentativa ${tentativa})` : t.task.title;
       L.push(
-        `| ${t.task.ordem} | ${rotulo} | ${quando(e.start)} | ${quando(e.end)} | ${duracao(e.end - e.start)} | ${e.ok ? "✓ concluída" : `✗ ${e.reason}`} |`
+        `| ${t.task.ordem} | ${celula(rotulo)} | ${quando(e.start)} | ${quando(e.end)} | ${duracao(e.end - e.start)} | ${e.ok ? "✓ concluída" : celula(`✗ ${e.reason}`)} |`
       );
     }
     L.push("");

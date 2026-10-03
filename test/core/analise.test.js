@@ -57,18 +57,18 @@ test("analisarLote: linha do tempo com início e fim de cada execução, inclusi
     path.join(env.home, "ledger.jsonl"),
     [
       linha("t1", 1000, 1100, true, "concluída"),
-      linha("t2", 1200, 1300, false, "limite five_hour atingido"),
+      linha("t2", 1200, 1300, false, "limite five_hour atingido\nfatal: segunda linha | com barra"),
       linha("t2", 5000, 5500, true, "concluída"),
     ].join("\n") + "\n"
   );
-  const q = (ts) => new Date(ts * 1000).toLocaleString();
+  const q = (ts) => new Date(ts * 1000).toLocaleString("pt-BR");
 
   const md = core.analisarLote(cfg, "linha").markdown;
   const tempo = md.split("## Linha do tempo")[1].split("\n## ")[0];
   const linhas = tempo.split("\n").filter((l) => /^\| \d/.test(l));
   assert.strictEqual(linhas.length, 3, "uma linha por execução, não por tarefa");
   assert.ok(linhas[0].includes(`| Tarefa 1 | ${q(1000)} | ${q(1100)} |`));
-  assert.ok(linhas[1].includes(`Tarefa 2 (tentativa 1) | ${q(1200)} | ${q(1300)} |`) && linhas[1].includes("✗ limite five_hour atingido"));
+  assert.ok(linhas[1].includes(`Tarefa 2 (tentativa 1) | ${q(1200)} | ${q(1300)} |`) && linhas[1].includes("✗ limite five_hour atingido fatal: segunda linha \\| com barra"), "quebra de linha e | não desmontam a tabela");
   assert.ok(linhas[2].includes(`Tarefa 2 (tentativa 2) | ${q(5000)} | ${q(5500)} |`) && linhas[2].includes("✓ concluída"));
 
   // o resumo conta o lote desde a primeira execução, e soma todas as tentativas

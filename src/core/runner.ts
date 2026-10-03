@@ -597,7 +597,7 @@ function escreverRelatorioDeFalha(
     `# Falha: ${task.title}`,
     "",
     `- Motivo: **${d.reason}**`,
-    `- Quando: ${new Date(d.inicio * 1000).toLocaleString()} (durou ${fmtDuration(nowSec() - d.inicio)})`,
+    `- Quando: ${new Date(d.inicio * 1000).toLocaleString("pt-BR")} (durou ${fmtDuration(nowSec() - d.inicio)})`,
     `- Modelo: ${task.model} · turnos: ${d.turnos ?? "?"} · código de saída: ${d.code ?? "?"}`,
     "",
     "## O que ela estava fazendo quando parou",
