@@ -434,9 +434,10 @@ test("análise do lote: sai ao concluir, com consumo, comandos e pontos de aten�
   assert.match(md, /- ✓ `npm run build`/);
   assert.match(md, /`pagina\.txt` \+\d+ −\d+/);
 
-  // atenção: a 3 não verificou nada; pagina.txt foi mexido por duas
+  // atenção: a 3 não verificou nada; a 2 sobrescreveu o pagina.txt que a 1 escreveu
   assert.match(md, /\*\*3\. Guia\*\* concluiu sem nenhum comando de terminal que passasse/);
-  assert.match(md, /`pagina\.txt` foi alterado pelas tarefas 1, 2/);
+  assert.match(md, /`pagina\.txt`: a tarefa 2 tirou ou reescreveu \d+ linha\(s\) que a tarefa 1 tinha escrito/);
+  assert.doesNotMatch(md, /`guia\.txt`:/, "arquivo que só uma tarefa escreveu não entra");
   assert.doesNotMatch(md, /\*\*1\. Pagina\*\* concluiu sem/);
   assert.match(md, /git merge --no-ff Dev_Branches\//);
 
