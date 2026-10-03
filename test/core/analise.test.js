@@ -77,3 +77,40 @@ test("analisarLote: linha do tempo com início e fim de cada execução, inclusi
   // e a seção da tarefa mostra a execução que valeu
   assert.ok(md.includes(`Início ${q(5000)} · fim ${q(5500)} · 8m (2ª tentativa)`));
 });
+
+test("trabalhoDesfeito: só aponta linha que uma tarefa escreveu e outra tirou, não arquivo tocado por várias", (t) => {
+  const fs = require("fs");
+  const path = require("path");
+  const { execFileSync } = require("child_process");
+  const env = tmpEnv();
+  t.after(() => env.cleanup());
+  const repo = path.join(env.root, "repo");
+  fs.mkdirSync(repo);
+  const git = (...a) => execFileSync("git", a, { cwd: repo, encoding: "utf8" }).trim();
+  git("init", "-b", "main");
+  git("config", "user.email", "t@exemplo.local");
+  git("config", "user.name", "T");
+  git("config", "commit.gpgsign", "false");
+  const commitar = (msg) => {
+    git("add", "-A");
+    git("commit", "-m", msg);
+    return git("rev-parse", "HEAD");
+  };
+  fs.writeFileSync(path.join(repo, "CHANGELOG.md"), "# Changelog\n");
+  commitar("base");
+
+  // tarefa 1: escreve uma regra e uma entrada no CHANGELOG
+  fs.writeFileSync(path.join(repo, "regra.ts"), "export const limite = calcularLimite(plano);\nexport const outro = 1;\n");
+  fs.appendFileSync(path.join(repo, "CHANGELOG.md"), "- tarefa um adicionou a regra\n");
+  const c1 = commitar("t1");
+  // tarefa 2: reescreve a regra da tarefa 1 e só acrescenta no CHANGELOG
+  fs.writeFileSync(path.join(repo, "regra.ts"), "export const limite = 10;\nexport const outro = 1;\n");
+  fs.appendFileSync(path.join(repo, "CHANGELOG.md"), "- tarefa dois mexeu na regra\n");
+  const c2 = commitar("t2");
+
+  const achados = core.trabalhoDesfeito(repo, [
+    { ordem: 1, commit: c1 },
+    { ordem: 2, commit: c2 },
+  ]);
+  assert.deepStrictEqual(achados, [{ arquivo: "regra.ts", de: 1, por: 2, linhas: 1 }], "o CHANGELOG, só acrescentado, não entra");
+});

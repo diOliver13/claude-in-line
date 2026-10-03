@@ -104,6 +104,65 @@ function alteracoesDoCommit(repo: string, commit: string): Alteracao[] {
     });
 }
 
+/** Por arquivo, as linhas que o commit escreveu e as que tirou. */
+type DiffDoCommit = Map<string, { escritas: Set<string>; tiradas: string[] }>;
+
+/** Linha que diz alguma coisa: fecha-chave, linha em branco e afins não contam como trabalho desfeito. */
+const significativa = (l: string) => /[\p{L}\p{N}]{3,}/u.test(l);
+
+function diffDoCommit(repo: string, commit: string): DiffDoCommit {
+  const saida = git(repo, ["show", "--format=", "-U0", "--no-color", "--no-renames", commit]);
+  const porArquivo: DiffDoCommit = new Map();
+  if (!saida) return porArquivo;
+  let anterior = "";
+  let atual: { escritas: Set<string>; tiradas: string[] } | null = null;
+  for (const linha of saida.split("\n")) {
+    if (linha.startsWith("--- ")) {
+      anterior = linha.slice(4).replace(/^a\//, "");
+      continue;
+    }
+    if (linha.startsWith("+++ ")) {
+      const novo = linha.slice(4).replace(/^b\//, "");
+      const nome = novo === "/dev/null" ? anterior : novo;
+      atual = porArquivo.get(nome) ?? { escritas: new Set(), tiradas: [] };
+      porArquivo.set(nome, atual);
+      continue;
+    }
+    if (!atual) continue;
+    const texto = linha.slice(1).trim();
+    if (!significativa(texto)) continue;
+    if (linha.startsWith("+")) atual.escritas.add(texto);
+    else if (linha.startsWith("-")) atual.tiradas.push(texto);
+  }
+  return porArquivo;
+}
+
+/**
+ * Num lote, mexer no mesmo arquivo é o esperado: cada tarefa constrói em cima
+ * da anterior. O que merece atenção é uma tarefa tirar linhas que outra
+ * escreveu — aí ela pode ter desfeito parte do trabalho, de propósito ou não.
+ */
+export function trabalhoDesfeito(
+  repo: string,
+  commits: { ordem: number; commit: string }[]
+): { arquivo: string; de: number; por: number; linhas: number }[] {
+  const diffs = commits.map((c) => ({ ordem: c.ordem, diff: diffDoCommit(repo, c.commit) }));
+  const achados: { arquivo: string; de: number; por: number; linhas: number }[] = [];
+  for (const depois of diffs) {
+    for (const [arquivo, { tiradas }] of depois.diff) {
+      if (!tiradas.length) continue;
+      for (const antes of diffs) {
+        if (antes.ordem >= depois.ordem) continue;
+        const escritas = antes.diff.get(arquivo)?.escritas;
+        if (!escritas) continue;
+        const linhas = tiradas.filter((l) => escritas.has(l)).length;
+        if (linhas) achados.push({ arquivo, de: antes.ordem, por: depois.ordem, linhas });
+      }
+    }
+  }
+  return achados.sort((a, b) => b.linhas - a.linhas);
+}
+
 /** O começo da resposta final: o suficiente para dizer o que foi feito. */
 function resumoDaResposta(id: string): string {
   let texto = "";
@@ -308,11 +367,17 @@ export function analisarLote(cfg: Config, nome: string): Analise | null {
     if (t.ledger?.negadas) atencao.push(`**${t.task.ordem}. ${t.task.title}** teve ${t.ledger.negadas} comando(s) negado(s).`);
     if (t.situacao === "concluída" && t.detalhes === null) atencao.push(`**${t.task.ordem}. ${t.task.title}** rodou numa versão anterior da fila: comandos não registrados.`);
   }
-  const porArquivo = new Map<string, number[]>();
-  for (const t of tarefas) for (const a of t.alteracoes) porArquivo.set(a.arquivo, [...(porArquivo.get(a.arquivo) ?? []), t.task.ordem]);
-  for (const [arquivo, ordens] of porArquivo) {
-    if (ordens.length > 1) atencao.push(`\`${arquivo}\` foi alterado pelas tarefas ${ordens.join(", ")} — é o ponto mais provável de uma desfazer parte da outra.`);
+  const commitsDoLote = tarefas
+    .map((t) => ({ ordem: t.task.ordem, commit: lote.commits[t.task.id] }))
+    .filter((c): c is { ordem: number; commit: string } => !!c.commit);
+  const desfeito = trabalhoDesfeito(lote.repo, commitsDoLote);
+  const MAX_DESFEITO = 10;
+  for (const d of desfeito.slice(0, MAX_DESFEITO)) {
+    atencao.push(
+      `\`${d.arquivo}\`: a tarefa ${d.por} tirou ou reescreveu ${d.linhas} linha(s) que a tarefa ${d.de} tinha escrito — confira se foi de propósito.`
+    );
   }
+  if (desfeito.length > MAX_DESFEITO) atencao.push(`… e mais ${desfeito.length - MAX_DESFEITO} caso(s) assim, com menos linhas.`);
   L.push("## Pontos de atenção", "", ...(atencao.length ? atencao.map((a) => `- ${a}`) : ["Nenhum."]), "");
 
   // ---------- por tarefa ----------

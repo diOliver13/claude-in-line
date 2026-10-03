@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-03 — 0.2.8: "pontos de atenção" aponta trabalho desfeito, não arquivo repetido
+
+**Por que.** No lote `conta-familia`, a análise listou 35 arquivos "alterados por mais de uma
+tarefa". Num lote isso é o esperado — cada tarefa constrói sobre a anterior —, e o aviso que
+importava se perdia no meio.
+
+- **O aviso agora é sobre linhas, não arquivos:** só aparece quando uma tarefa tirou ou reescreveu
+  linhas que uma anterior tinha escrito, com quantas e de qual para qual. Arquivo que só ganhou
+  texto (CHANGELOG, documentação) sai da lista. Linhas sem conteúdo (chave, linha em branco) não
+  contam. Os 10 maiores casos aparecem; o resto vira uma contagem.
+
 ## 2026-10-03 (manhã) — 0.2.7: linha do tempo legível
 
 - **Motivo de falha com quebra de linha desmontava a tabela** da linha do tempo — o "already exists"

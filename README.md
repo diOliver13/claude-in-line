@@ -294,7 +294,8 @@ revisar e juntar:
 - **O que cada tarefa fez**: o começo da resposta final, os arquivos com `+/-`, e os **comandos que
   ela rodou, com o resultado** — é o que responde "ela testou mesmo?".
 - **Pontos de atenção**: tarefa que concluiu sem nenhum comando que passasse, comando que falhou ou
-  foi negado, e arquivo alterado por mais de uma tarefa.
+  foi negado, e **trabalho desfeito**: linha que uma tarefa escreveu e uma tarefa seguinte tirou ou
+  reescreveu. Mexer no mesmo arquivo, por si só, não é apontado — num lote isso é o esperado.
 
 No menu do lote, **Copiar descrição de PR** leva o que foi feito e como foi verificado, sem a
 contabilidade. A análise de um lote bloqueado ou cancelado também sai pelo menu, a qualquer momento.
