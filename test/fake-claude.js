@@ -26,6 +26,21 @@ process.stdin.on("end", () => {
   const antes = fs.readdirSync(process.cwd()).filter(f => f !== ".git").sort().join(",");
   fs.writeFileSync(path.join(process.cwd(), arquivo), `arquivos antes: ${antes}\nprompt recebido:\n` + input);
 
+  // `MODO: orfao`: deixa um processo vivo, desligado da árvore, com a pasta da
+  // worktree como diretório atual -- como o Postgres embutido de um teste Java.
+  // `PIDFILE: <caminho>` diz onde anotar o pid dele.
+  if (mode === "orfao") {
+    const { spawn } = require("child_process");
+    setTimeout(() => {
+      const filho = spawn(process.execPath, ["-e", "setInterval(()=>{},1000)"], { cwd: process.cwd(), detached: true, stdio: "ignore" });
+      filho.unref();
+      fs.writeFileSync(marcador("PIDFILE") || process.env.FAKE_PIDFILE, String(filho.pid));
+      out({ type: "result", subtype: "success", is_error: false, num_turns: 1, total_cost_usd: 0, result: "Deixei um processo rodando." });
+      process.exit(0);
+    }, 4000); // dá tempo de a fila prender o processo num job, como na vida real
+    return;
+  }
+
   // `COMANDO: <cmd>`: um comando de terminal que rodou e passou — o que a análise chama de verificação
   const comando = marcador("COMANDO");
   if (comando) {

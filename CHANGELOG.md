@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-10-03 — 0.2.6: o que a tarefa deixa rodando morre com ela
+
+**Por que.** A 0.2.4 tratou a pasta da worktree que sobrava como acaso do Windows. Não era: de 12
+worktrees do FinCompass, nenhuma tinha saído do disco, e a tarefa 6 do lote `conta-familia` travou
+de novo em "already exists" mesmo depois da retomada automática. Eram duas causas, as duas
+constantes:
+
+- **Processo órfão segurando a pasta.** Os testes do backend sobem um PostgreSQL embutido; quando
+  a tarefa acaba, ele continua vivo, com a pasta `backend` da worktree como diretório atual. O
+  `taskkill /T` não o alcança, porque o processo Java que o criou já morreu e a árvore se perdeu.
+  Três deles estavam rodando havia horas.
+- **Atalhos do npm em `node_modules`.** Os workspaces criam junctions para `frontend` e `shared`.
+  O git não consegue apagá-las, e o `fs.rmSync` volta sem erro deixando a pasta no disco.
+
+O que mudou:
+
+- **No Windows, o `claude` roda dentro de um Job Object.** Tudo o que ele iniciar — inclusive o que
+  ficar órfão — morre quando a tarefa termina, antes de a worktree ser removida. Os processos que
+  ele já tinha criado quando o job foi montado (o `node` por trás de um `claude.cmd`) também entram:
+  a árvore é varrida na hora e de novo a cada 5 s. Se o PowerShell não conseguir montar o job, a
+  tarefa roda como antes e o log diz.
+- **Links e junctions são desfeitos antes de remover a worktree**, sem segui-los.
+- **A remoção confere o disco no fim.** Se a pasta continuar lá, o log diz; e uma nova tentativa
+  que encontra a sobra falha com um motivo legível em vez do "already exists" do git.
+
 ## 2026-10-02 (noite) — 0.2.5: horário de início e fim na análise do lote
 
 - **Seção "Linha do tempo" na análise do lote**: uma linha por execução, com início, fim, duração e

@@ -287,6 +287,10 @@ test("worktree que sobrou de uma tentativa anterior não trava a próxima", asyn
   const dirSobra = path.join(env.home, "worktrees", `${path.basename(repo)}-${idB}`);
   fs.mkdirSync(dirSobra, { recursive: true });
   fs.writeFileSync(path.join(dirSobra, "lixo.txt"), "sobra de uma execução anterior\n");
+  // o que o npm workspaces deixa: junction em node_modules apontando para uma
+  // pasta da própria worktree que o git já apagou. É o que o rmSync não remove.
+  fs.mkdirSync(path.join(dirSobra, "node_modules", "@app"), { recursive: true });
+  fs.symlinkSync(path.join(dirSobra, "shared"), path.join(dirSobra, "node_modules", "@app", "shared"), "junction");
 
   const eventos = await rodarAteParar(cfg);
   const resultados = fins(eventos).map((e) => e.result);

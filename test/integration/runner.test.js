@@ -193,6 +193,37 @@ test("anexos: arquivo de fora do repo é copiado para dentro da worktree antes d
   assert.match(recebido, /frontend\/public\/logo\.svg/);
 });
 
+test("processo órfão deixado pela tarefa é encerrado, e a worktree sai do disco", { skip: !ehWindows && "Job Object é do Windows" }, async (t) => {
+  const pidfile = path.join(require("node:os").tmpdir(), `cq-orfao-${process.pid}-${Date.now()}.txt`);
+  const anterior = process.env.FAKE_PIDFILE;
+  process.env.FAKE_PIDFILE = pidfile;
+  t.after(() => {
+    process.env.FAKE_PIDFILE = anterior;
+    try {
+      const pid = Number(fs.readFileSync(pidfile, "utf8"));
+      if (pid) process.kill(pid);
+    } catch {
+      /* já morreu, que é o esperado */
+    }
+    fs.rmSync(pidfile, { force: true });
+  });
+
+  const { env, id, eventos } = await rodarCiclo(t, "orfao");
+  assert.strictEqual(fim(eventos).result.ok, true, fim(eventos).result.reason);
+
+  const pid = Number(fs.readFileSync(pidfile, "utf8"));
+  const vivo = () => {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  assert.strictEqual(vivo(), false, "o processo que ficou rodando foi encerrado junto com a tarefa");
+  assert.deepStrictEqual(fs.readdirSync(path.join(env.home, "worktrees")), [], `a worktree de ${id} não sobrou no disco`);
+});
+
 test("anexos: arquivo de origem inexistente falha antes de chamar o claude, sem gastar turno", async (t) => {
   const env = tmpEnv();
   const claudeAnterior = process.env.CLAUDE_CONFIG_DIR;

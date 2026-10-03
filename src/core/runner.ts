@@ -20,6 +20,7 @@ import {
 } from "./lote";
 import { Task, listTasks, moveTask, slugify } from "./queue";
 import { escreverAnaliseDoLote } from "./analise";
+import { conterProcesso } from "./job";
 import { computeGauge } from "./gauge";
 import { recordSnapshot, snapshotFromRateLimitEvent } from "./snapshot";
 import { pesoDoUso } from "./transcripts";
@@ -200,13 +201,58 @@ function branchLivre(repo: string, nome: string): string {
 function limparResiduoSeExistir(repo: string, dir: string): void {
   if (!fs.existsSync(dir)) return;
   log(`worktree ${dir} já existia (sobra de uma tentativa anterior); limpando antes de tentar de novo`);
-  git(repo, ["worktree", "remove", "--force", dir]);
+  if (!removerWorktree(repo, dir)) {
+    throw new Error(
+      `a pasta ${dir}, de uma tentativa anterior, não pôde ser apagada: algum processo ainda a usa. ` +
+        "Encerre-o (ou reinicie o Windows) e tente de novo"
+    );
+  }
+}
+
+/**
+ * Links simbólicos e junctions, sem segui-los. Os workspaces do npm criam
+ * junctions em `node_modules` apontando para pastas da própria worktree; o git
+ * do Windows não consegue apagá-las, e o `fs.rmSync` volta sem erro deixando a
+ * pasta no disco.
+ */
+function desfazerLinks(dir: string): void {
+  let entradas: fs.Dirent[];
   try {
-    fs.rmSync(dir, { recursive: true, force: true });
-  } catch (e) {
-    log(`não consegui limpar ${dir} de vez: ${e instanceof Error ? e.message : String(e)}`);
+    entradas = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const e of entradas) {
+    const p = path.join(dir, e.name);
+    if (e.isSymbolicLink()) {
+      try {
+        fs.unlinkSync(p);
+      } catch {
+        try {
+          fs.rmdirSync(p);
+        } catch {
+          /* o rmSync tenta de novo */
+        }
+      }
+    } else if (e.isDirectory()) desfazerLinks(p);
+  }
+}
+
+/** Tira a worktree do git e do disco. Devolve se a pasta de fato sumiu. */
+function removerWorktree(repo: string, dir: string): boolean {
+  desfazerLinks(dir);
+  const r = git(repo, ["worktree", "remove", "--force", dir]);
+  if (fs.existsSync(dir)) {
+    if (!r.ok) log(`git não removeu a worktree ${dir} (${r.err}); apagando direto`);
+    try {
+      fs.rmSync(dir, { recursive: true, force: true, maxRetries: 3, retryDelay: 300 });
+    } catch (e) {
+      log(`não consegui apagar ${dir}: ${e instanceof Error ? e.message : String(e)}`);
+    }
   }
   git(repo, ["worktree", "prune"]);
+  // o rmSync pode voltar sem erro e deixar a pasta: só o disco diz a verdade
+  return !fs.existsSync(dir);
 }
 
 function prepareWorktree(task: Task, cfg: Config): Worktree {
@@ -306,20 +352,10 @@ function finishWorktree(task: Task, wt: Worktree, ok: boolean): Fechamento {
     commit = git(wt.dir, ["rev-parse", "HEAD"]).out || null;
   }
 
-  const removido = git(task.repo, ["worktree", "remove", "--force", wt.dir]);
-  if (!removido.ok) {
-    // Acontece no Windows: o processo do claude acabou de morrer e algo (o
-    // antivírus, um handle que ainda não soltou) segura um arquivo por um
-    // instante. Sem isto, a pasta sobra e a PRÓXIMA tentativa desta tarefa
-    // falha com "already exists" -- limparResiduoSeExistir cobre esse caso
-    // de novo, mas tentar aqui evita precisar disso.
-    log(`não consegui remover a worktree ${wt.dir} (${removido.err}); tentando de novo na força`);
-    try {
-      fs.rmSync(wt.dir, { recursive: true, force: true });
-    } catch (e) {
-      log(`limpeza de ${wt.dir} falhou: ${e instanceof Error ? e.message : String(e)}`);
-    }
-    git(task.repo, ["worktree", "prune"]);
+  if (!removerWorktree(task.repo, wt.dir)) {
+    // O trabalho já está commitado; a sobra só atrapalha uma nova tentativa,
+    // e limparResiduoSeExistir tenta de novo antes dela.
+    log(`a worktree ${wt.dir} continua no disco: algum processo ainda segura a pasta`);
   }
   // Branch sem nenhuma alteração só polui o repositório. A do lote fica: ela é
   // do conjunto, e a próxima tarefa vai precisar dela.
@@ -743,6 +779,7 @@ export async function runTask(task: Task, cfg: Config, opts: TaskOptions = {}): 
 
   const streamFile = fs.createWriteStream(path.join(runDir, "stream.jsonl"));
   const child = spawnClaude(bin, args, wt.dir);
+  const contencao = isWin && child.pid ? conterProcesso(child.pid, log) : null;
   child.stdin!.end(buildPrompt(task, wt, wt.lote ? contextoDoLote(cfg, task, wt.lote) : []));
 
   const observador = new Observador(wt.dir);
@@ -828,6 +865,9 @@ export async function runTask(task: Task, cfg: Config, opts: TaskOptions = {}): 
     });
   });
   clearTimeout(timer);
+  // Antes de remover a worktree: o que a tarefa deixou rodando (servidor de
+  // dev, banco embutido de teste) seguraria a pasta.
+  await contencao?.encerrar();
   opts.signal?.removeEventListener("abort", onAbort);
   if (buf.trim()) onLine(buf);
   streamFile.end();

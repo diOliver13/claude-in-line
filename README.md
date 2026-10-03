@@ -198,6 +198,10 @@ Cada tarefa roda numa `git worktree` separada, em `~/.cq/worktrees/`, na branch 
 
 Ao final, a extensão commita tudo (`cq:` se deu certo, `cq(wip):` se falhou ou foi cancelada) e remove a worktree. **Branch sem alteração nenhuma é apagada**, para não poluir o repositório.
 
+**O que a tarefa deixa rodando morre com ela.** No Windows, o `claude` roda dentro de um Job
+Object: um servidor de dev ou o banco embutido de um teste, que sobreviveriam como órfãos segurando a
+pasta da worktree, são encerrados quando a tarefa termina.
+
 A extensão **nunca** usa `--dangerously-skip-permissions`, nunca faz push e nunca mexe em remotos.
 
 ## O nome das branches

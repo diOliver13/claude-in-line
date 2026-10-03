@@ -15,3 +15,4 @@ export * from "./lote";
 export * from "./analise";
 export * from "./limpeza";
 export * from "./runner";
+export * from "./job";
