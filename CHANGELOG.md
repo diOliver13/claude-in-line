@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-04 — 0.2.9: relatório de uma tentativa antiga não se passa por atual
+
+- **Quando a tarefa roda de novo, o `falha.md` da tentativa anterior vira `falha-tentativa-N.md`**
+  (e o `stderr.txt`, `stderr-tentativa-N.txt`). Antes ele ficava na pasta da execução: a tarefa 2
+  do lote `operador-contas` parou por limite, foi retomada sozinha e concluiu, mas o relatório
+  continuava dizendo "parada por limite". O histórico segue guardado, com o número da tentativa a
+  que pertence.
+
 ## 2026-10-03 — 0.2.8: "pontos de atenção" aponta trabalho desfeito, não arquivo repetido
 
 **Por que.** No lote `conta-familia`, a análise listou 35 arquivos "alterados por mais de uma

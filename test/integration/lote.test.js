@@ -276,6 +276,28 @@ test("lote bloqueado por um problema de verdade (não limite) nunca retoma sozin
   assert.strictEqual(core.findTask(cfg, idB).status, "failed");
 });
 
+test("tarefa que falha e depois conclui não fica com o relatório de falha com cara de atual", async (t) => {
+  const { env, repo, cfg } = cenario(t);
+  enfileirar(env, repo, { titulo: "Parte A", lote: "tentativas", ordem: 1, corpo: "ARQUIVO: a.txt" });
+  const idB = enfileirar(env, repo, { titulo: "Parte B", lote: "tentativas", ordem: 2, corpo: "ARQUIVO: b.txt\nMODO: falha" });
+
+  await rodarAteParar(cfg);
+  const pasta = path.join(env.home, "runs", idB);
+  assert.ok(fs.existsSync(path.join(pasta, "falha.md")), "a primeira tentativa falhou e deixou o relatório");
+
+  // o que "Tentar de novo" faz, com o pedido corrigido
+  const tarefa = core.findTask(cfg, idB);
+  fs.writeFileSync(tarefa.file, fs.readFileSync(tarefa.file, "utf8").replace("MODO: falha", ""));
+  core.moveTask(core.findTask(cfg, idB), "queued");
+  core.desbloquearLote("tentativas");
+  await rodarAteParar(cfg);
+
+  assert.strictEqual(core.findTask(cfg, idB).status, "done");
+  assert.ok(!fs.existsSync(path.join(pasta, "falha.md")), "nenhum falha.md sobra numa tarefa concluída");
+  assert.match(fs.readFileSync(path.join(pasta, "falha-tentativa-1.md"), "utf8"), /# Falha: Parte B/, "o da tentativa 1 fica guardado com o número dela");
+  assert.match(fs.readFileSync(path.join(pasta, "result.md"), "utf8"), /concluída/);
+});
+
 test("worktree que sobrou de uma tentativa anterior não trava a próxima", async (t) => {
   const { env, repo, cfg } = cenario(t);
   enfileirar(env, repo, { titulo: "Parte A", lote: "residuo", ordem: 1, corpo: "ARQUIVO: a.txt" });

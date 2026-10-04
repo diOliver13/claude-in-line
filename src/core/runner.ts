@@ -24,7 +24,7 @@ import { conterProcesso } from "./job";
 import { computeGauge } from "./gauge";
 import { recordSnapshot, snapshotFromRateLimitEvent } from "./snapshot";
 import { pesoDoUso } from "./transcripts";
-import { P, appendJsonl, fmtDuration, log, nowSec, toEpochSec, acquireLock, releaseLock } from "./util";
+import { P, appendJsonl, fmtDuration, log, nowSec, readJsonl, toEpochSec, acquireLock, releaseLock } from "./util";
 
 const isWin = process.platform === "win32";
 
@@ -725,6 +725,25 @@ function copiarAnexos(task: Task, wt: Worktree): void {
 }
 
 /** Sem worktree, sem turno gasto: mesmo formato de relatório de uma falha de verdade. */
+/**
+ * Uma nova execução da mesma tarefa reaproveita a pasta. O `result.md` e o
+ * registro são reescritos, mas o `falha.md` (e o `stderr.txt`) de uma tentativa
+ * que falhou ficariam lá com cara de estado atual -- e uma tarefa concluída na
+ * segunda tentativa continuaria "parada por limite" para quem abrisse a pasta.
+ * Eles ganham o número da tentativa a que pertencem: o histórico fica, sem
+ * confundir.
+ */
+export function guardarTentativaAnterior(id: string, runDir: string): void {
+  const tentativas = readJsonl<{ id: string }>(P.ledger).filter((l) => l?.id === id).length;
+  for (const [nome, ext] of [["falha", "md"], ["stderr", "txt"]] as const) {
+    const atual = path.join(runDir, `${nome}.${ext}`);
+    if (!fs.existsSync(atual)) continue;
+    let n = Math.max(1, tentativas);
+    while (fs.existsSync(path.join(runDir, `${nome}-tentativa-${n}.${ext}`))) n++;
+    fs.renameSync(atual, path.join(runDir, `${nome}-tentativa-${n}.${ext}`));
+  }
+}
+
 function falharAntesDeComecar(task: Task, cfg: Config, runDir: string, started: number, motivo: string): RunResult {
   const lote = task.lote ? lerLote(task.lote) : null;
   const relatorioFalha = escreverRelatorioDeFalha(runDir, task, {
@@ -743,6 +762,7 @@ function falharAntesDeComecar(task: Task, cfg: Config, runDir: string, started: 
 export async function runTask(task: Task, cfg: Config, opts: TaskOptions = {}): Promise<RunResult> {
   const runDir = path.join(P.runs, task.id);
   fs.mkdirSync(runDir, { recursive: true });
+  guardarTentativaAnterior(task.id, runDir);
   const started = nowSec();
   const medidorAntes = medirAgora(cfg);
   let wt: Worktree;
