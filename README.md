@@ -268,6 +268,9 @@ destrava o lote sozinha, sem precisar de **Tentar de novo**. Bloqueio por qualqu
 (teste quebrado, ferramenta negada, o que for) continua esperando sua decisão — é inevitável não
 dar pra saber, só pelo tipo de erro, se repetir o mesmo pedido resolve ou repete o problema.
 
+Vale também para tarefa **avulsa** (fora de lote): parada só por limite, ela sai de Com falha e
+volta para a fila sozinha quando o orçamento libera.
+
 ### Revisando um lote
 
 O grupo **Lotes** mostra cada lote com as tarefas dentro, na ordem, com o commit de cada uma.

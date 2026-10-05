@@ -1001,7 +1001,7 @@ function fecharNoLote(cfg: Config, task: Task, r: RunResult): void {
 }
 
 /**
- * Lote bloqueado só porque o Claude Code recusou por limite (não porque a
+ * Tarefa parada só porque o Claude Code recusou por limite (não porque a
  * tarefa teve um problema de verdade): com orçamento de novo, ela volta
  * sozinha para a fila, sem esperar "Tentar de novo". Bloqueio por qualquer
  * outro motivo (teste quebrado, ferramenta negada, o que for) nunca entra
@@ -1017,6 +1017,36 @@ function retomarBloqueiosPorLimite(cfg: Config): void {
     moveTask(tarefa, "queued");
     desbloquearLote(lote.nome);
     log(`lote ${lote.nome}: orçamento voltou, ${tarefa.id} retomada sozinha`);
+  }
+  retomarAvulsasPorLimite(cfg);
+}
+
+/**
+ * Os motivos que a própria fila escreve quando o Claude Code recusa por
+ * limite (`rejected`) ou quando ela mesma aborta no aviso (`onWarning:
+ * abort`). Qualquer outro motivo é problema da tarefa.
+ */
+const MOTIVO_DE_LIMITE = /^(limite \S+ atingido|aviso de limite \S+)$/;
+
+/**
+ * O mesmo, para tarefa avulsa (fora de lote): ela não tem bloqueio onde
+ * guardar `porLimite`, então quem diz é a última tentativa no ledger. Caso
+ * real: a avulsa parou no limite de 5h, a janela zerou e ela ficou em Com
+ * falha, com a fila vazia, esperando um clique que o lote já não precisava.
+ */
+function retomarAvulsasPorLimite(cfg: Config): void {
+  const falhas = listTasks(cfg, "failed").filter((t) => !t.lote);
+  if (!falhas.length) return;
+  // O ledger é só de acréscimo: a última linha de cada id é a tentativa mais recente.
+  const ultima = new Map<string, { ok?: boolean; reason?: string }>();
+  for (const l of readJsonl<{ id?: string; ok?: boolean; reason?: string }>(P.ledger)) {
+    if (l?.id) ultima.set(l.id, l);
+  }
+  for (const tarefa of falhas) {
+    const l = ultima.get(tarefa.id);
+    if (!l || l.ok || !MOTIVO_DE_LIMITE.test(String(l.reason ?? ""))) continue;
+    moveTask(tarefa, "queued");
+    log(`${tarefa.id}: orçamento voltou, retomada sozinha (parou por ${l.reason})`);
   }
 }
 

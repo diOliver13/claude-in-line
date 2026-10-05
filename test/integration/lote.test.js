@@ -276,6 +276,39 @@ test("lote bloqueado por um problema de verdade (não limite) nunca retoma sozin
   assert.strictEqual(core.findTask(cfg, idB).status, "failed");
 });
 
+test("tarefa avulsa parada só por limite também volta sozinha quando o freio passa", async (t) => {
+  const { env, repo, cfg } = cenario(t);
+  const id = enfileirar(env, repo, { titulo: "Avulsa", corpo: "ARQUIVO: a.txt\nMODO: rejected" });
+
+  await rodarAteParar(cfg);
+  assert.strictEqual(core.findTask(cfg, id).status, "failed");
+
+  // o freio ainda vale: continua em Com falha
+  assert.strictEqual(await core.runQueue(cfg, {}), 0);
+  assert.strictEqual(core.findTask(cfg, id).status, "failed");
+
+  const estado = JSON.parse(fs.readFileSync(path.join(env.home, "state.json"), "utf8"));
+  delete estado.brake;
+  writeJson(path.join(env.home, "state.json"), estado);
+
+  const eventos = [];
+  await core.runQueue(cfg, { onEvent: (e) => eventos.push(e) });
+  assert.ok(
+    eventos.some((e) => e.kind === "task-start" && e.task.id === id),
+    "retomou a avulsa sem ação manual, mesmo com a fila vazia"
+  );
+});
+
+test("tarefa avulsa com falha de verdade fica em Com falha", async (t) => {
+  const { env, repo, cfg } = cenario(t);
+  const id = enfileirar(env, repo, { titulo: "Quebrada", corpo: "ARQUIVO: a.txt\nMODO: falha" });
+
+  await rodarAteParar(cfg);
+  assert.strictEqual(core.findTask(cfg, id).status, "failed");
+  assert.strictEqual(await core.runQueue(cfg, {}), 0);
+  assert.strictEqual(core.findTask(cfg, id).status, "failed");
+});
+
 test("tarefa que falha e depois conclui não fica com o relatório de falha com cara de atual", async (t) => {
   const { env, repo, cfg } = cenario(t);
   enfileirar(env, repo, { titulo: "Parte A", lote: "tentativas", ordem: 1, corpo: "ARQUIVO: a.txt" });

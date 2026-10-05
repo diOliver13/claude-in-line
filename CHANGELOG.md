@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-05 — 0.2.10: tarefa avulsa parada por limite também volta sozinha
+
+- **A retomada automática por limite agora cobre tarefa fora de lote.** Antes só o lote bloqueado
+  por limite voltava sozinho; a avulsa ia para Com falha e lá ficava. Caso real: "Esconder valores"
+  parou no limite de 5h, a janela zerou e a fila ficou vazia esperando um clique em Tentar de novo.
+  Como a avulsa não tem bloqueio onde guardar o motivo, quem decide é a última tentativa dela no
+  histórico: só volta se parou porque o Claude Code recusou por limite. Falha de qualquer outro tipo
+  continua esperando você.
+
 ## 2026-10-04 — 0.2.9: relatório de uma tentativa antiga não se passa por atual
 
 - **Quando a tarefa roda de novo, o `falha.md` da tentativa anterior vira `falha-tentativa-N.md`**
